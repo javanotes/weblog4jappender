@@ -52,12 +52,13 @@ public class WeblogsAppender extends AppenderSkeleton {
     }
   }
   /*
-   * Properties
+   * --- Properties --
    */
   private String serviceUrl = "";
   private String applicationId = "applicationId";
   private int batchSize = 10;
-  private long timerSecs = 5;
+  private long flushSecs = 5;
+  /* ------------------ */
   
   public String getServiceUrl() {
     return serviceUrl;
@@ -173,7 +174,7 @@ public class WeblogsAppender extends AppenderSkeleton {
     public void run() {
       if (lock.tryLock()) {
         try {
-          if (!requests.isEmpty() && (System.currentTimeMillis() - lastCleared) > timerSecs) {
+          if (!requests.isEmpty() && (System.currentTimeMillis() - lastCleared) > flushSecs) {
             doPost();
           } 
         }
@@ -186,7 +187,7 @@ public class WeblogsAppender extends AppenderSkeleton {
       }
       
     }
-  }, timerSecs, timerSecs, TimeUnit.SECONDS);
+  }, flushSecs, flushSecs, TimeUnit.SECONDS);
    
    Runtime.getRuntime().addShutdownHook(new Thread(){
      public void run()
