@@ -56,10 +56,16 @@ public class WeblogsAppender extends AppenderSkeleton {
    */
   private String serviceUrl = "";
   private String applicationId = "applicationId";
-  private int batchSize = 10;
+  private int batchSize = 50;
   private long flushSecs = 5;
   /* ------------------ */
   
+  long getFlushSecs() {
+    return flushSecs;
+  }
+  void setFlushSecs(long flushSecs) {
+    this.flushSecs = flushSecs;
+  }
   public String getServiceUrl() {
     return serviceUrl;
   }
@@ -172,18 +178,17 @@ public class WeblogsAppender extends AppenderSkeleton {
     
     @Override
     public void run() {
-      if (lock.tryLock()) {
-        try {
-          if (!requests.isEmpty() && (System.currentTimeMillis() - lastCleared) > flushSecs) {
-            doPost();
-          } 
-        }
-        catch (IOException e) {
-          LogLog.error("WeblogsAppender -- Stackrace", e);
-        }
-        finally{
-          lock.unlock();
-        }
+      lock.lock();
+      try {
+        if (!requests.isEmpty() && (System.currentTimeMillis() - lastCleared) > flushSecs) {
+          doPost();
+        } 
+      }
+      catch (IOException e) {
+        LogLog.error("WeblogsAppender -- Stackrace", e);
+      }
+      finally{
+        lock.unlock();
       }
       
     }
