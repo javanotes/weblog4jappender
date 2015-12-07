@@ -63,7 +63,7 @@ public class WeblogsAppender extends AppenderSkeleton {
   long getFlushSecs() {
     return flushSecs;
   }
-  void setFlushSecs(long flushSecs) {
+  public void setFlushSecs(long flushSecs) {
     this.flushSecs = flushSecs;
   }
   public String getServiceUrl() {
@@ -102,7 +102,7 @@ public class WeblogsAppender extends AppenderSkeleton {
       conn.setRequestMethod("POST");
       conn.setRequestProperty("Content-Type", "application/json");
       
-      LogRequests req = new LogRequests();
+      final LogRequests req = new LogRequests();
       requests.drainTo(req.getBatch());
       String input = req.toString();
       //System.out.println(input);
@@ -134,7 +134,7 @@ public class WeblogsAppender extends AppenderSkeleton {
             + conn.getResponseCode());
         
       if(success){
-        requests.clear();
+        requests.removeAll(req.getBatch());
         lastCleared = System.currentTimeMillis();
       }
       
@@ -267,12 +267,12 @@ public class WeblogsAppender extends AppenderSkeleton {
       }
       req.setLogText(s.toString());
     }
-    
     req.setLevel(event.getLevel().toString());
     //System.out.println("===========>>>>>>>>>>>>>>>>>"+req);
     
-    boolean offered = requests.offer(req);
-    if (!offered) {
+    boolean offeredApp = requests.offer(req);
+    //this has a chance of thread spike in a multithreaded environment
+    if (!offeredApp) {
       threads.submit(new Runnable() {
 
         @Override
@@ -281,7 +281,8 @@ public class WeblogsAppender extends AppenderSkeleton {
           do 
           {
             if (lock.tryLock()) {
-              try {
+              try 
+              {
                 offered = requests.offer(req);
                 if (!offered) {
                   try {
@@ -295,8 +296,9 @@ public class WeblogsAppender extends AppenderSkeleton {
                 lock.unlock();
               }
             }
-            else
+            if (!offered) {
               offered = requests.offer(req);
+            }
           } while (!offered);
 
         }
