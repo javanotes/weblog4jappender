@@ -48,7 +48,7 @@ public class LogRequest {
   void setLogText(String logText) {
     this.logText = logText;
   }
-  
+  private long timestamp = System.currentTimeMillis();
   private String level;
   public String[] getSearchTerms() {
     return searchTerms;
@@ -57,6 +57,7 @@ public class LogRequest {
     this.searchTerms = searchTerms;
   }
 
+  private String logger;
   //from Jettison
   private static String escapeChars(String string)
  {
@@ -176,6 +177,18 @@ public class LogRequest {
     this.level = level;
   }
 
+  public long getTimestamp() {
+    return timestamp;
+  }
+  public void setTimestamp(long timestamp) {
+    this.timestamp = timestamp;
+  }
+  public String getLogger() {
+    return logger;
+  }
+  public void setLogger(String logger) {
+    this.logger = logger;
+  }
   private String applicationId;//not null
   
   private String logText;

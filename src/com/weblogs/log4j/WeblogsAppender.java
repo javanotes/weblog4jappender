@@ -45,10 +45,12 @@ public class WeblogsAppender extends AppenderSkeleton {
       
   public void close() {
     
-    try {
-      doPost();
-    } catch (IOException e) {
-      LogLog.error("WeblogsAppender -- Stackrace", e);
+    if (!requests.isEmpty()) {
+      try {
+        doPost();
+      } catch (IOException e) {
+        LogLog.error("WeblogsAppender -- Stackrace", e);
+      } 
     }
   }
   /*
@@ -91,66 +93,68 @@ public class WeblogsAppender extends AppenderSkeleton {
   private boolean doPost() throws IOException
   {
     //LogLog.debug("================= Weblogging =================");
-    URL url = new URL(serviceUrl);
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    
     
     BufferedReader br = null;
+    HttpURLConnection conn = null;
     try
     {
-      
-      conn.setDoOutput(true);
-      conn.setRequestMethod("POST");
-      conn.setRequestProperty("Content-Type", "application/json");
-      
+            
       final LogRequests req = new LogRequests();
       requests.drainTo(req.getBatch());
-      String input = req.toString();
-      //System.out.println(input);
       
-      OutputStream os = conn.getOutputStream();
-      os.write(input.getBytes());
-      os.flush();
-      
-      if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
-        throw new IOException("Weblogging failed : HTTP code : "
-          + conn.getResponseCode());
-      }
-      
-      StringBuilder output = new StringBuilder();
-      String line;
-      
-      br = new BufferedReader(new InputStreamReader(
-          (conn.getInputStream())));
-      
-      while ((line = br.readLine()) != null) {
-        output.append(line);
-      }
-      
-      String lr = output.toString();
-      //System.out.println(lr);
-      boolean success = lr != null && lr.contains("SUCCESS");
-      if(!success)
-        throw new IOException("Weblogging failed : ["+lr+"] HTTP code : "
-            + conn.getResponseCode());
+      if (!req.getBatch().isEmpty()) 
+      {
+        String input = req.toString();
+        //System.out.println(input);
         
-      if(success){
-        requests.removeAll(req.getBatch());
-        lastCleared = System.currentTimeMillis();
+        URL url = new URL(serviceUrl);
+        conn = (HttpURLConnection) url.openConnection();
+        conn.setDoOutput(true);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        
+        OutputStream os = conn.getOutputStream();
+        os.write(input.getBytes());
+        os.flush();
+        if (conn.getResponseCode() != HttpURLConnection.HTTP_OK) {
+          throw new IOException(
+              "Weblogging failed : HTTP code : " + conn.getResponseCode());
+        }
+        StringBuilder output = new StringBuilder();
+        String line;
+        br = new BufferedReader(new InputStreamReader((conn.getInputStream())));
+        while ((line = br.readLine()) != null) {
+          output.append(line);
+        }
+        String lr = output.toString();
+        //System.out.println(lr);
+        boolean success = lr != null && lr.contains("SUCCESS");
+        if (!success)
+          throw new IOException("Weblogging failed : [" + lr + "] HTTP code : "
+              + conn.getResponseCode());
+        if (success) {
+          requests.removeAll(req.getBatch());
+          lastCleared = System.currentTimeMillis();
+        }
+        return success;
       }
-      
-      return success;
+      else
+        return true;
       
     }
     finally
     {
       if(br != null)
         br.close();
-      conn.disconnect();
+      if (conn != null) {
+        conn.disconnect();
+      }
     }
 
     
   }
-  private long lastCleared;
+  private volatile long lastCleared;
   public void activateOptions() {
    if(layout == null)
      layout = new SimpleLayout();
@@ -267,7 +271,9 @@ public class WeblogsAppender extends AppenderSkeleton {
       }
       req.setLogText(s.toString());
     }
+    req.setTimestamp(event.getTimeStamp());
     req.setLevel(event.getLevel().toString());
+    req.setLogger(event.getLoggerName());
     //System.out.println("===========>>>>>>>>>>>>>>>>>"+req);
     
     boolean offeredApp = requests.offer(req);
