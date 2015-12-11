@@ -274,6 +274,8 @@ public class WeblogsAppender extends AppenderSkeleton {
     req.setTimestamp(event.getTimeStamp());
     req.setLevel(event.getLevel().toString());
     req.setLogger(event.getLoggerName());
+    req.setExecutionId(event.getThreadName());
+    
     //System.out.println("===========>>>>>>>>>>>>>>>>>"+req);
     
     boolean offeredApp = requests.offer(req);

@@ -189,8 +189,15 @@ public class LogRequest {
   public void setLogger(String logger) {
     this.logger = logger;
   }
+  public String getExecutionId() {
+    return executionId;
+  }
+  public void setExecutionId(String executionId) {
+    this.executionId = executionId;
+  }
   private String applicationId;//not null
   
   private String logText;
   private String[] searchTerms;
+  private String executionId;
 }
